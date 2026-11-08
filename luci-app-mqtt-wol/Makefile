@@ -17,7 +17,9 @@ PKG_MAINTAINER:=rzzx
 PKG_LICENSE:=MIT
 
 LUCI_TITLE:=LuCI support for MQTT Wake-On-LAN
-LUCI_DEPENDS:=+mqtt-wol
+# luci-compat pulls luci-lua-runtime: required for classic Lua/CBI apps on
+# OpenWrt 25.12+, where base LuCI is ucode-only
+LUCI_DEPENDS:=+mqtt-wol +luci-compat
 LUCI_PKGARCH:=all
 
 ifneq ($(wildcard $(TOPDIR)/feeds/luci/luci.mk),)

@@ -24,7 +24,8 @@ MQTT (топик устройства, payload "1"/"on"/"wake")
 Зависимости демона: `libmosquitto-ssl` (с TLS «из коробки»), `libuci`,
 `libubus`, `libblobmsg-json`, `libpthread` — всё есть в официальных
 репозиториях OpenWrt 21.02+. LuCI-приложение — классическое (Lua/CBI через
-`luci-compat` + `luci-lua-runtime`), работает на 21.02—25.12 включительно.
+`luci-compat` + `luci-lua-runtime`; на 25.12 это обязательная зависимость,
+она указана в `DEPENDS`), работает на 21.02—25.12 включительно.
 
 ## Возможности
 
@@ -206,6 +207,35 @@ luci-app-mqtt-wol/        # LuCI (OpenWrt package)
 tools/                    # woltest — ручной запуск magic packet, python-слушатель
 Makefile                  # dev-цели test/check
 ```
+
+## Частые проблемы
+
+**Нет пункта «MQTT Wake-On-LAN» в Services (25.12):**
+в новых релизах базовая LuCI работает на ucode, и для классических
+Lua/CBI-приложений нужен пакет `luci-compat` (он тянет `luci-lua-runtime`) —
+начиная с этой версии он указан в зависимостях `luci-app-mqtt-wol`. Для уже
+установленной связки достаточно:
+```sh
+apk add luci-compat
+rm -rf /tmp/luci-modulecache /tmp/luci-indexcache*
+/etc/init.d/uhttpd restart
+```
+Проверка: `logread | grep -i "no Lua runtime"` — сообщение uhttpd означает
+ровно отсутствие этого пакета.
+
+**`broker refused connection (code 5: not authorised)`** в `logread`:
+демон подключается анонимно — задайте логин/пароль брокера:
+```sh
+uci set mqtt-wol.main.username='u_XXXXXX'
+uci set mqtt-wol.main.password='ВАШ_ПАРОЛЬ'
+uci set mqtt-wol.@device[0].mac='AA:BB:CC:DD:EE:FF'
+uci commit mqtt-wol
+/etc/init.d/mqtt-wol restart
+logread -e mqtt-wol   # ждём "mqtt: connected to m8.wqtt.ru:21236"
+```
+(то же самое доступно в LuCI: Settings). Если с корректными учётными
+данными код 5 сохраняется — проверьте на брокере, не привязан ли слот
+только к определённому clientid, и используйте MQTT v3.1.1-совместимый порт.
 
 ## Известные ограничения / идеи
 
