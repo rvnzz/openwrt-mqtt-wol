@@ -1,0 +1,6 @@
+woltest
+out/
+.dl/
+sdk/
+openwrt-sdk-*/
+*.o

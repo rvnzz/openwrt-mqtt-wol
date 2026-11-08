@@ -1,0 +1,17 @@
+{
+	"luci-app-mqtt-wol": {
+		"description": "Grant UCI and ubus access to luci-app-mqtt-wol",
+		"read": {
+			"ubus": {
+				"mqtt-wol": [ "status" ]
+			},
+			"uci": [ "mqtt-wol" ]
+		},
+		"write": {
+			"ubus": {
+				"mqtt-wol": [ "wake", "reload" ]
+			},
+			"uci": [ "mqtt-wol" ]
+		}
+	}
+}

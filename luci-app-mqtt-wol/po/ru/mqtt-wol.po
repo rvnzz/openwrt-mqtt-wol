@@ -1,0 +1,159 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "MQTT Wake-On-LAN"
+msgstr "MQTT Wake-On-LAN"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid ""
+"The router listens on MQTT topics and sends Wake-on-LAN magic packets to "
+"the configured devices. Publishing '1' (or 'on' / 'wake') to a device topic "
+"wakes it up; devices can also be woken manually from the Status tab."
+msgstr ""
+"Роутер слушает MQTT-топики и рассылает magic-пакеты Wake-on-LAN на "
+"настроенные устройства. Публикация '1' (или 'on' / 'wake') в топик "
+"устройства будит его; устройства можно разбудить и вручную со вкладки "
+"«Статус»."
+
+msgid "MQTT broker"
+msgstr "MQTT-брокер"
+
+msgid "Connection settings for the MQTT broker."
+msgstr "Параметры подключения к MQTT-брокеру."
+
+msgid "Enable"
+msgstr "Включено"
+
+msgid "Broker host"
+msgstr "Хост брокера"
+
+msgid "Hostname or IP address, e.g. m8.wqtt.ru"
+msgstr "Имя хоста или IP-адрес, например m8.wqtt.ru"
+
+msgid "Broker port"
+msgstr "Порт брокера"
+
+msgid "Username"
+msgstr "Имя пользователя"
+
+msgid "Password"
+msgstr "Пароль"
+
+msgid "Client ID"
+msgstr "Идентификатор клиента"
+
+msgid "Must be unique on the broker; defaults to openwrt-mqtt-wol."
+msgstr ""
+"Должен быть уникальным на брокере; по умолчанию openwrt-mqtt-wol."
+
+msgid "Keepalive (s)"
+msgstr "Keepalive (сек)"
+
+msgid "Use TLS"
+msgstr "Использовать TLS"
+
+msgid "Requires the libmosquitto-ssl package (installed by default)."
+msgstr "Требуется пакет libmosquitto-ssl (устанавливается по умолчанию)."
+
+msgid "CA bundle"
+msgstr "Файл CA-сертификатов"
+
+msgid ""
+"Path to a CA certificate bundle, e.g. /etc/ssl/ca-certificates.crt"
+msgstr "Путь к связке CA-сертификатов, например /etc/ssl/ca-certificates.crt"
+
+msgid "Status topic (optional)"
+msgstr "Топик статуса (необязательно)"
+
+msgid "Retained online/offline JSON about this daemon is published here."
+msgstr "Сюда публикуется retained JSON о состоянии online/offline демона."
+
+msgid "Wake-on-LAN defaults"
+msgstr "Параметры Wake-on-LAN по умолчанию"
+
+msgid "UDP port"
+msgstr "UDP-порт"
+
+msgid "Destination port of the magic packet. Default: 9."
+msgstr "Порт назначения magic-пакета. По умолчанию: 9."
+
+msgid "Default broadcast address"
+msgstr "Адрес вещания по умолчанию"
+
+msgid ""
+"One or more comma-separated targets, e.g. 255.255.255.255,192.168.1.255. "
+"Per-device settings override this."
+msgstr ""
+"Один или несколько адресов через запятую, например "
+"255.255.255.255,192.168.1.255. Настройки устройства переопределяют это "
+"значение."
+
+msgid "Debug log"
+msgstr "Отладочный лог"
+
+msgid "Devices"
+msgstr "Устройства"
+
+msgid ""
+"Each device has its own MQTT topic. Any wake command arriving there triggers "
+"the magic packet."
+msgstr ""
+"У каждого устройства свой MQTT-топик. Команда будильника, пришедшая в него, "
+"отправляет magic-пакет."
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "Office PC"
+msgstr "Рабочий ПК"
+
+msgid "MAC address"
+msgstr "MAC-адрес"
+
+msgid "MQTT topic"
+msgstr "MQTT-топик"
+
+msgid ""
+"May contain MQTT wildcards (+/#). On hosted brokers (e.g. clusterfly) use "
+"the full topic including the user prefix."
+msgstr ""
+"Допускаются подстановочные знаки MQTT (+/#). На хостинговых брокерах "
+"(например, clusterfly) указывайте полный топик вместе с префиксом "
+"пользователя."
+
+msgid "Port"
+msgstr "Порт"
+
+msgid "Leave empty for default."
+msgstr "Оставьте пустым для значения по умолчанию."
+
+msgid "Broadcast address"
+msgstr "Адрес вещания"
+
+msgid "Comma-separated; leave empty for default."
+msgstr "Через запятую; оставьте пустым для значения по умолчанию."
+
+msgid "Daemon status"
+msgstr "Состояние демона"
+
+msgid "Loading…"
+msgstr "Загрузка…"
+
+msgid "Reload daemon"
+msgstr "Перезапустить демон"
+
+msgid "WOL port"
+msgstr "Порт WOL"
+
+msgid "No devices configured"
+msgstr "Устройства не настроены"

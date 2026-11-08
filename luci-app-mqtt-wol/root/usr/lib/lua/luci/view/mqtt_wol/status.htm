@@ -1,0 +1,156 @@
+<%+header%>
+<%
+	local ctx = luci.dispatcher.context
+	local token = (ctx and (ctx.authtoken or ctx.token)) or ""
+	local url = luci.dispatcher.build_url("admin", "services", "mqtt-wol")
+%>
+
+<h2 name="content"><%:MQTT Wake-On-LAN%></h2>
+
+<div class="cbi-map">
+	<fieldset class="cbi-section">
+		<legend><%:Daemon status%></legend>
+		<div id="wol-info" class="panel wide" style="margin:0 1em 1em"><em><%:Loading…%></em></div>
+		<div style="margin:0 1em 1em">
+			<input type="button" class="cbi-button cbi-button-apply" id="wol-reload-btn"
+				value="<%:Reload daemon%>" />
+		</div>
+	</fieldset>
+
+	<fieldset class="cbi-section">
+		<legend><%:Devices%></legend>
+		<table class="table" id="wol-devices" style="margin:0 1em 1em">
+			<tr class="tr table-titler">
+				<th class="th"><%:Name%></th>
+				<th class="th"><%:MAC address%></th>
+				<th class="th"><%:MQTT topic%></th>
+				<th class="th"><%:WOL port%></th>
+				<th class="th">&#160;</th>
+			</tr>
+			<tr class="tr placeholder" id="wol-none"><td class="td" colspan="5"><em><%:No devices configured%></em></td></tr>
+		</table>
+	</fieldset>
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+	var BASE  = '<%=url%>';
+	var TOKEN = '<%=token%>';
+	var info  = document.getElementById('wol-info');
+	var table = document.getElementById('wol-devices');
+	var none  = document.getElementById('wol-none');
+	var last  = null;
+
+	function el(tag, cls, text) {
+		var e = document.createElement(tag);
+		if (cls) e.className = cls;
+		if (text != null) e.appendChild(document.createTextNode(text));
+		return e;
+	}
+
+	function fmt_uptime(s) {
+		var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+		    m = Math.floor(s % 3600 / 60);
+		return (d ? d + 'd ' : '') + (d || h ? h + 'h ' : '') + m + 'm';
+	}
+
+	function api(path, params) {
+		var q = 'token=' + encodeURIComponent(TOKEN);
+		for (var k in params)
+			q += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+
+		return fetch(BASE + '/' + path, {
+			method: params ? 'POST' : 'GET',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: params ? q : null
+		}).then(function(r) { return r.text(); }).then(function(t) {
+			try { return JSON.parse(t); }
+			catch (e) { return { result: 'ERROR', message: t || 'request failed' }; }
+		});
+	}
+
+	function wake(btn, target) {
+		btn.disabled = true;
+		btn.value = '…';
+		api('wake', { target: target }).then(function(j) {
+			btn.disabled = false;
+			btn.value = j.result === 'OK' ? '✓' : '✗';
+			setTimeout(function() { btn.value = btn._label; refresh(); }, 1500);
+		});
+	}
+
+	function render(d) {
+		while (table.rows.length > 1)
+			table.deleteRow(1);
+
+		if (d.error) {
+			info.textContent = '';
+			info.appendChild(el('em', null,
+				'Daemon is not reachable. Check that it is enabled ' +
+				'and running: /etc/init.d/mqtt-wol start'));
+			none.style.display = '';
+			return;
+		}
+
+		info.textContent = '';
+
+		var p = el('p');
+		var on = d.connected === true || d.connected === 1 || d.connected === '1';
+		var dot = el('strong', null, on ? ' ● ' : ' ● ');
+		dot.style.color = on ? '#32b042' : '#d9534f';
+		p.appendChild(dot);
+		p.appendChild(document.createTextNode(
+			(d.host || '?') + ':' + d.port + (on ? ' — connected' : ' — disconnected')));
+		p.appendChild(el('br'));
+		p.appendChild(document.createTextNode(
+			'Uptime: ' + fmt_uptime(d.uptime || 0) +
+			'   ·   WOL packets sent: ' + (d.wake_count || 0)));
+		if (d.last_wake) {
+			p.appendChild(el('br'));
+			p.appendChild(document.createTextNode('Last wake: ' + d.last_wake.target +
+				' at ' + new Date(d.last_wake.ts * 1000).toLocaleString()));
+		}
+		info.appendChild(p);
+
+		var devs = d.devices || [];
+		none.style.display = devs.length ? 'none' : '';
+
+		devs.forEach(function(v) {
+			var row = el('tr', 'tr');
+			row.appendChild(el('td', 'td', v.name));
+			row.appendChild(el('td', 'td', v.mac));
+			row.appendChild(el('td', 'td', v.topic));
+			row.appendChild(el('td', 'td', String(v.port)));
+
+			var btn = el('input', 'cbi-button cbi-button-action important');
+			btn.type = 'button';
+			btn._label = 'Wake';
+			btn.value = 'Wake';
+			btn.addEventListener('click', function() { wake(btn, v.name); });
+
+			var cell = el('td', 'td');
+			cell.appendChild(btn);
+			row.appendChild(cell);
+			table.appendChild(row);
+		});
+	}
+
+	function refresh() {
+		api('api').then(render);
+	}
+
+	document.getElementById('wol-reload-btn').addEventListener('click', function(btn) {
+		btn.disabled = true;
+		api('reload', {}).then(function() {
+			setTimeout(function() { btn.disabled = false; refresh(); }, 1500);
+		});
+	});
+
+	refresh();
+	setInterval(refresh, 5000);
+})();
+//]]>
+</script>
+
+<%+footer%>

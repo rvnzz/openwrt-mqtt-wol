@@ -1,0 +1,113 @@
+name: Build OpenWrt packages
+
+# Собирает mqtt-wol + luci-app-mqtt-wol в официальном OpenWrt SDK.
+# По push в main — под роутер по умолчанию (25.12.6 mediatek/filogic).
+# Через "Run workflow" можно выбрать любой релиз и target.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: OpenWrt release (SDK version)
+        type: string
+        default: "25.12.6"
+      profile:
+        description: Target profile (DISTRIB_TARGET)
+        type: string
+        default: "mediatek/filogic"
+  push:
+    branches: [main]
+
+env:
+  VERSION: ${{ inputs.version || '25.12.6' }}
+  PROFILE: ${{ inputs.profile || 'mediatek/filogic' }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zstd rsync time subversion git
+
+      - name: Resolve SDK download
+        id: sdk
+        run: |
+          prof="${PROFILE//\//-}"
+          echo "PROFILE_SAFE=$prof" >> "$GITHUB_ENV"
+          base="https://downloads.openwrt.org/releases/${VERSION}/targets/${PROFILE}/"
+          sums=$(curl -fsSL "${base}sha256sums")
+          # имя SDK меняется gcc-версией/расширением — берём из sha256sums
+          line=$(echo "$sums" | grep -E "openwrt-sdk-${VERSION}-${prof}_gcc.*\.Linux-x86_64\.tar\.(zst|xz)" | head -n1)
+          test -n "$line" || { echo "SDK for $VERSION / $PROFILE not found"; exit 1; }
+          echo "sum=${line%% *}" >> "$GITHUB_OUTPUT"
+          f="${line#* }"; f="${f#\*}"
+          echo "file=$f" >> "$GITHUB_OUTPUT"
+          echo "url=${base}${f}" >> "$GITHUB_OUTPUT"
+          echo "SDK: $f"
+
+      - name: Cache SDK archive
+        uses: actions/cache@v4
+        with:
+          path: .dl
+          key: openwrt-sdk-${{ env.VERSION }}-${{ steps.sdk.outputs.sum }}
+
+      - name: Download and verify SDK
+        run: |
+          mkdir -p .dl sdk-work
+          f=".dl/${{ steps.sdk.outputs.file }}"
+          if [ ! -f "$f" ]; then
+            curl -fL --retry 3 -o "$f" "${{ steps.sdk.outputs.url }}"
+          fi
+          echo "${{ steps.sdk.outputs.sum }}  $f" | sha256sum -c -
+          case "$f" in
+            *.zst) tar --zstd -xf "$f" -C sdk-work ;;
+            *)     tar xf "$f" -C sdk-work ;;
+          esac
+          cd sdk-work/openwrt-sdk-*/
+          echo "SDK_DIR=$PWD" >> "$GITHUB_ENV"
+
+      - name: Prepare feeds and copy our packages
+        run: |
+          cd "$SDK_DIR"
+          # feeds подтягиваются из release-закреплённых ссылок feeds.conf.default
+          # (включая luci — нужен для luci-app через luci.mk)
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          cp -r "$GITHUB_WORKSPACE/mqtt-wol" package/
+          cp -r "$GITHUB_WORKSPACE/luci-app-mqtt-wol" package/
+          make defconfig V=w
+
+      - name: Build packages
+        run: |
+          cd "$SDK_DIR"
+          pkgs="package/mqtt-wol package/luci-app-mqtt-wol"
+          for p in $pkgs; do make $p/{clean,compile} -j$(nproc) V=w; done \
+            || { echo "::error::пересборка с V=s для логов"; \
+                 for p in $pkgs; do make $p/compile V=s; done; exit 1; }
+
+      - name: Collect artifacts
+        run: |
+          cd "$SDK_DIR"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          find bin -type f \( -name "*mqtt-wol*.ipk" -o -name "*mqtt-wol*.apk" \) \
+            -exec cp -v {} "$GITHUB_WORKSPACE/out/" \;
+          test "$(ls -A "$GITHUB_WORKSPACE/out")" || { echo "nothing built"; find bin -type f | head; exit 1; }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mqtt-wol-${{ env.PROFILE_SAFE }}-${{ env.VERSION }}
+          path: out/
+          if-no-files-found: error
