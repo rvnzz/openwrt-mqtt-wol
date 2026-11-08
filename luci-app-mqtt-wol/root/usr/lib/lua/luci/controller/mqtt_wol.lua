@@ -1,5 +1,4 @@
 local io = io
-local os = os
 local string = string
 
 module("luci.controller.mqtt_wol", package.seeall)
@@ -7,41 +6,50 @@ module("luci.controller.mqtt_wol", package.seeall)
 local ACL = { "luci-app-mqtt-wol" }
 
 function index()
-	if not nixio.fs.access("/etc/config/mqtt-wol") then
+	-- guard optional dependencies: an uncaught Lua error inside index()
+	-- aborts the whole menu index build and 404s every LuCI page
+	if not (nixio and nixio.fs and nixio.fs.access("/etc/config/mqtt-wol")) then
 		return
 	end
 
-	local page = entry({ "admin", "services", "mqtt-wol" }, alias(),
-		_("MQTT Wake-On-LAN"))
-	page.dependent = true
-	page.acl = ACL
-	page.order = 60
+	local function register()
+		local page = entry({ "admin", "services", "mqtt-wol" }, alias(),
+			_("MQTT Wake-On-LAN"))
+		page.dependent = true
+		page.acl = ACL
+		page.order = 60
 
-	local e = entry({ "admin", "services", "mqtt-wol", "settings" },
-		cbi("mqtt_wol/settings"), _("Settings"), 10)
-	e.acl = ACL
+		local e = entry({ "admin", "services", "mqtt-wol", "settings" },
+			cbi("mqtt_wol/settings"), _("Settings"), 10)
+		e.acl = ACL
 
-	e = entry({ "admin", "services", "mqtt-wol", "status" },
-		template("mqtt_wol/status"), _("Status"), 20)
-	e.acl = ACL
+		e = entry({ "admin", "services", "mqtt-wol", "status" },
+			template("mqtt_wol/status"), _("Status"), 20)
+		e.acl = ACL
 
-	e = entry({ "admin", "services", "mqtt-wol", "api" },
-		call("api_status"), nil)
-	e.acl = ACL
-	e.leaf = true
+		e = entry({ "admin", "services", "mqtt-wol", "api" },
+			call("api_status"), nil)
+		e.acl = ACL
+		e.leaf = true
 
-	e = entry({ "admin", "services", "mqtt-wol", "wake" },
-		post("action_wake"), nil)
-	e.acl = ACL
-	e.leaf = true
+		e = entry({ "admin", "services", "mqtt-wol", "wake" },
+			post("action_wake"), nil)
+		e.acl = ACL
+		e.leaf = true
 
-	e = entry({ "admin", "services", "mqtt-wol", "reload" },
-		post("action_reload"), nil)
-	e.acl = ACL
-	e.leaf = true
+		e = entry({ "admin", "services", "mqtt-wol", "reload" },
+			post("action_reload"), nil)
+		e.acl = ACL
+		e.leaf = true
+	end
+
+	local ok, err = pcall(register)
+	if not ok then
+		io.stderr:write("mqtt-wol controller failed: " .. tostring(err) .. "\n")
+	end
 end
 
--- restricted character whitelist, safe to embed into single-quoted shell
+-- restricted character whitelist, safe to embed into a single-quoted shell
 -- argument and into a JSON string
 local function sanitize_target(t)
 	if not t or #t > 64 then
@@ -78,7 +86,7 @@ local function to_json(out, fallback_msg)
 		return out
 	end
 
-	local msg = out and #out > 0 and out or fallback_msg
+	local msg = (out and #out > 0 and out) or fallback_msg
 	msg = msg:gsub('["\\\r\n]', " ")
 	return string.format('{"result":"ERROR","message":"%s"}', msg)
 end
