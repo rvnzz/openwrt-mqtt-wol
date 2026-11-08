@@ -13,7 +13,9 @@ function index()
 	end
 
 	local function register()
-		local page = entry({ "admin", "services", "mqtt-wol" }, alias(),
+		-- firstchild() instead of alias(): on 25.12's ucode dispatcher an
+		-- argument-less alias resolves to an empty path and 404s the page
+		local page = entry({ "admin", "services", "mqtt-wol" }, firstchild(),
 			_("MQTT Wake-On-LAN"))
 		page.dependent = true
 		page.acl = ACL
